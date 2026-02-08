@@ -1,0 +1,93 @@
+We have a working product, DJ. The "Brain" (Backend) and "Face" (Frontend) are talking, and the "Handshake" is solid.
+
+To answer your question: **"Where do I touch it to make it mine?"**
+
+Since we are using **Tailwind CSS + Shadcn/ui**, you don't write traditional CSS files. You have three "Control Centers" depending on how deep you want to go.
+
+Here is your **Personalization Map**:
+
+### **Level 1: The "Paint Job" (Colors & Fonts)**
+
+* **Goal:** Change the blue buttons to purple, or the white background to dark grey, or make the corners rounder.
+* **Where:** `frontend/src/index.css`
+
+This file contains the "DNA" of your app. Shadcn uses **CSS Variables** here.
+Look for lines like this:
+
+```css
+:root {
+  --primary: 222.2 47.4% 11.2%;   /* The main color (currently dark blue) */
+  --radius: 0.5rem;               /* How round the buttons are */
+}
+
+```
+
+* **Hack:** If you change `--radius` to `1.5rem`, all your cards and buttons instantly become pill-shaped.
+* **Hack:** If you want a "Teal" theme instead of Slate, you update the `--primary` HSL numbers here.
+
+### **Level 2: The "Furniture Arrangement" (Layout)**
+
+* **Goal:** Move the "Add Medicine" button to the left, make the input boxes bigger, or add your logo.
+* **Where:** `frontend/src/App.tsx`
+
+This is where 90% of your edits will happen. You simply change the **Tailwind Classes** inside the HTML.
+
+**Example:**
+Right now, your "Generate PDF" button is blue:
+
+```tsx
+<Button className="bg-blue-600 hover:bg-blue-700 ...">
+
+```
+
+Change it to emerald green instantly:
+
+```tsx
+<Button className="bg-emerald-600 hover:bg-emerald-700 ...">
+
+```
+
+### **Level 3: The "LEGO Bricks" (Components)**
+
+* **Goal:** You want *every* input box in the entire app to have a thick border, or *every* button to have a shadow.
+* **Where:** `frontend/src/components/ui/...`
+
+You will see files like `button.tsx`, `input.tsx`, `card.tsx`.
+If you edit `button.tsx`, **every single button** in your app updates automatically. This is the power of React components.
+
+---
+
+### **Try This Experiment (Instant Rebranding)**
+
+Let's make it look less "Generic Medical" and more "Tejas Tech."
+
+**Open `frontend/src/App.tsx` and find the Header section.**
+Replace the `<div>` that holds the title with this "Dark Mode" aesthetic code:
+
+```tsx
+{/* HEADER */}
+<div className="flex justify-between items-center bg-slate-900 p-6 rounded-2xl mb-8 shadow-2xl">
+  <div>
+    <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 tracking-tight">
+      OneStopMed ⚡
+    </h1>
+    <p className="text-slate-400 font-mono text-sm mt-1">v1.0 // Dr. Tejas Protocol</p>
+  </div>
+  <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
+    System Settings
+  </Button>
+</div>
+
+```
+
+**Save it.** You will instantly see how just changing `className` transforms the vibe from "Clinic" to "Cyberpunk."
+
+---
+
+### **What is Next?**
+
+You can tweak the UI forever (it's addictive), but we have a major milestone left.
+We have a list of drugs, but clicking "Generate PDF" does nothing.
+
+**Are you ready to start PHASE 3: THE ARTIFACT (PDF Generation)?**
+This is where we make the actual file the doctor gives to the patient.

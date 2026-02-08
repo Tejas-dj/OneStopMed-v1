@@ -1,0 +1,8 @@
+Component,Technology,Why this choice?
+Frontend,React + Vite,"Lightweight, instant setup, no server-side complexity needed yet."
+Backend,FastAPI (Python),"High performance, native JSON support, fits your AIML background perfectly."
+Styling,Tailwind CSS,"Build a ""medical-grade"" clean UI in minutes, not hours."
+UI Library,Shadcn/ui,"Pre-built, accessible components (Inputs, Checkboxes) that look professional immediately."
+PDF Engine,WeasyPrint,Crucial. Allows you to style PDFs using CSS (like a web page) rather than drawing coordinates.
+Fuzzy Match,TheFuzz,"Python library. Handles typos (e.g., ""Augmntin"" → ""AUGMENTIN"")."
+Hosting,Vercel (FE) + Render (BE),"Free tiers, easiest CI/CD deployment."

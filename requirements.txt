@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+thefuzz
+python-multipart
+python-Levenshtein
