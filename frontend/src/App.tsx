@@ -137,7 +137,7 @@ export default function App() {
     }
 
     try {
-      const response = await axios.get(`http://127.0.0.1:8000/search?q=${value}`);
+      const response = await axios.get(`https://onestopmed-v1-api.onrender.com/search?q=${value}`);
       if (response.data.results && response.data.results.length > 0) {
         setMedicines((prev) =>
           prev.map((med) =>
@@ -223,7 +223,7 @@ export default function App() {
         }))
       };
 
-      const response = await axios.post("http://127.0.0.1:8000/generate_pdf", payload, {
+      const response = await axios.post("https://onestopmed-v1-api.onrender.com/generate_pdf", payload, {
         responseType: 'blob',
       });
 
