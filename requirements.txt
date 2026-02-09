@@ -3,3 +3,10 @@ uvicorn
 thefuzz
 python-multipart
 python-Levenshtein
+fastapi
+uvicorn
+weasyprint
+jinja2
+thefuzz
+python-multipart
+requests
