@@ -3,64 +3,119 @@
 <head>
     <style>
         @page { size: A4; margin: 2cm; }
-        body { font-family: 'Helvetica', sans-serif; color: #333; line-height: 1.6; }
+        body { font-family: 'Helvetica', sans-serif; color: #333; line-height: 1.4; font-size: 14px; }
         
-        .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #000; padding-bottom: 20px; }
-        .clinic-name { font-size: 28px; font-weight: bold; color: #2c3e50; text-transform: uppercase; letter-spacing: 2px; }
-        .doctor-details { font-size: 14px; color: #7f8c8d; margin-top: 5px; }
-        
-        .meta-table { width: 100%; margin-bottom: 30px; border-collapse: collapse; }
-        .meta-table td { padding: 8px; vertical-align: top; }
-        .meta-label { font-weight: bold; color: #555; width: 15%; }
-        .meta-val { width: 35%; border-bottom: 1px dotted #ccc; }
+        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #2c3e50; padding-bottom: 20px; margin-bottom: 20px; }
+        .clinic-name { font-size: 26px; font-weight: 900; color: #2c3e50; letter-spacing: 1px; }
+        .clinic-sub { font-size: 12px; color: #7f8c8d; text-transform: uppercase; margin-top: 5px; }
+        .doctor-box { text-align: right; }
+        .dr-name { font-weight: bold; font-size: 16px; }
+        .dr-meta { font-size: 12px; color: #555; }
 
-        .rx-symbol { font-size: 40px; font-weight: bold; font-family: 'Times New Roman', serif; margin-bottom: 10px; }
+        /* Vitals Grid */
+        .vitals-grid { display: table; width: 100%; border-collapse: collapse; margin-bottom: 10px; background-color: #f8f9fa; border-radius: 5px; }
+        .vitals-row { display: table-row; }
+        .vitals-cell { display: table-cell; padding: 10px; border: 1px solid #eee; width: 25%; }
+        .label { font-size: 10px; text-transform: uppercase; color: #7f8c8d; font-weight: bold; display: block; margin-bottom: 2px; }
+        .value { font-size: 14px; font-weight: 600; color: #2c3e50; }
 
-        .drug-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .drug-table th { text-align: left; border-bottom: 2px solid #333; padding: 10px 5px; font-size: 14px; text-transform: uppercase; }
-        .drug-table td { padding: 12px 5px; border-bottom: 1px solid #eee; font-size: 15px; }
+        /* ALLERGIES ROW (NEW) */
+        .allergy-row { margin-bottom: 20px; padding: 8px 10px; background-color: #fceceb; border-left: 4px solid #c0392b; color: #c0392b; font-weight: bold; font-size: 13px; }
+
+        /* Diagnosis Box */
+        .diagnosis-box { border-left: 4px solid #3498db; background-color: #f0f8ff; padding: 15px; margin-bottom: 30px; }
+        .diagnosis-title { font-weight: bold; color: #2980b9; margin-bottom: 5px; text-transform: uppercase; font-size: 11px; }
+        .diagnosis-text { font-style: italic; font-size: 15px; }
+
+        .rx-symbol { font-size: 32px; font-weight: bold; font-family: 'Times New Roman', serif; margin-bottom: 10px; color: #2c3e50; }
+
+        /* Medicine Table */
+        .drug-table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        .drug-table th { text-align: left; background-color: #2c3e50; color: white; padding: 8px; font-size: 12px; text-transform: uppercase; }
+        .drug-table td { padding: 12px 8px; border-bottom: 1px solid #ddd; vertical-align: top; }
         
-        .brand { font-weight: bold; font-size: 16px; }
-        .generic { font-size: 12px; color: #666; font-style: italic; }
-        
+        .brand { font-weight: bold; font-size: 15px; color: #000; }
+        .generic { font-size: 11px; color: #666; font-family: monospace; }
+        .instruction { font-size: 12px; color: #e67e22; font-style: italic; margin-top: 2px; }
+
+        /* Follow Up Box */
+        .follow-up-box { margin-top: 40px; border: 1px dashed #aaa; padding: 15px; border-radius: 5px; background-color: #fffdf0; }
+        .follow-up-label { font-size: 11px; font-weight: bold; text-transform: uppercase; color: #d35400; margin-bottom: 5px; }
+        .follow-up-text { font-size: 14px; font-weight: bold; }
+
         .footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 10px; color: #aaa; border-top: 1px solid #eee; padding-top: 10px; }
-        .signature { text-align: right; margin-top: 50px; padding-right: 50px; }
-        .sign-line { border-top: 1px solid #333; width: 200px; display: inline-block; margin-top: 50px; }
+        .signature { text-align: right; margin-top: 60px; padding-right: 20px; }
+        .sign-line { border-top: 1px solid #333; width: 200px; display: inline-block; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div class="clinic-name">OneStopMed Clinic</div>
-        <div class="doctor-details">
-            Dr. Tejas D. Jaiprakash (MBBS, MD)<br>
-            Reg No: KMC-2026-BLR | Internal Medicine
+        <div>
+            <div class="clinic-name">ONESTOPMED</div>
+            <div class="clinic-sub">Primary Care & Diagnostics</div>
+        </div>
+        <div class="doctor-box">
+            <div class="dr-name">Dr. Tejas D. Jaiprakash</div>
+            <div class="dr-meta">MBBS, MD (Internal Medicine)</div>
+            <div class="dr-meta">Reg: KMC-2026-BLR</div>
         </div>
     </div>
 
-    <table class="meta-table">
-        <tr>
-            <td class="meta-label">Patient Name:</td>
-            <td class="meta-val">{{ patient_name }}</td>
-            <td class="meta-label">Date:</td>
-            <td class="meta-val">{{ date }}</td>
-        </tr>
-        <tr>
-            <td class="meta-label">Age/Gender:</td>
-            <td class="meta-val">{{ age }} / {{ gender }}</td>
-            <td class="meta-label">ID:</td>
-            <td class="meta-val">#{{ visit_id }}</td>
-        </tr>
-    </table>
+    <div class="vitals-grid">
+        <div class="vitals-row">
+            <div class="vitals-cell">
+                <span class="label">Patient Name</span>
+                <span class="value">{{ patient_name }}</span>
+            </div>
+            <div class="vitals-cell">
+                <span class="label">Age / Gender</span>
+                <span class="value">{{ age }} / {{ gender }}</span>
+            </div>
+            <div class="vitals-cell">
+                <span class="label">Weight</span>
+                <span class="value">{{ weight }} kg</span>
+            </div>
+            <div class="vitals-cell">
+                <span class="label">Blood Pressure</span>
+                <span class="value">{{ bp }}</span>
+            </div>
+        </div>
+        <div class="vitals-row">
+            <div class="vitals-cell">
+                <span class="label">Date</span>
+                <span class="value">{{ date }}</span>
+            </div>
+            <div class="vitals-cell" style="border-right: none;">
+                <span class="label">Visit ID</span>
+                <span class="value">#{{ visit_id }}</span>
+            </div>
+             <div class="vitals-cell" style="border:none; background:white;"></div>
+             <div class="vitals-cell" style="border:none; background:white;"></div>
+        </div>
+    </div>
+
+    <div class="allergy-row">
+        ⚠ ALLERGIES: {{ allergies }}
+    </div>
+
+    {% if diagnosis %}
+    <div class="diagnosis-box">
+        <div class="diagnosis-title">Diagnosis / Clinical Notes</div>
+        <div class="diagnosis-text">{{ diagnosis }}</div>
+    </div>
+    {% endif %}
 
     <div class="rx-symbol">℞</div>
 
     <table class="drug-table">
         <thead>
             <tr>
-                <th width="50%">Medicine</th>
-                <th width="25%">Frequency</th>
-                <th width="25%">Duration</th>
+                <th width="35%">Medicine</th>
+                <th width="15%">Dosage</th>
+                <th width="10%">Freq</th>
+                <th width="10%">Dur</th>
+                <th width="30%">Instructions</th>
             </tr>
         </thead>
         <tbody>
@@ -70,20 +125,53 @@
                     <div class="brand">{{ med.name }}</div>
                     <div class="generic">{{ med.generic }}</div>
                 </td>
+                <td>{{ med.dosage }}</td> 
                 <td>{{ med.frequency }}</td>
                 <td>{{ med.duration }}</td>
+                <td>
+                    <div class="instruction">
+                        {% if med.timing != '-' %}
+                            <strong>{{ med.timing }}</strong>
+                        {% endif %}
+                        
+                        {% if med.timing != '-' and med.remarks %}
+                            . 
+                        {% endif %}
+
+                        {% if med.remarks %}
+                            {{ med.remarks }}
+                        {% endif %}
+                    </div>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
+    {% if follow_up_date or follow_up_reason %}
+    <div class="follow-up-box">
+        <div class="follow-up-label">Next Visit / Follow Up Plan</div>
+        <div class="follow-up-text">
+            {% if follow_up_date %}
+                Date: {{ follow_up_date }} 
+            {% endif %}
+            
+            {% if follow_up_date and follow_up_reason %} | {% endif %}
+
+            {% if follow_up_reason %}
+                Reason: {{ follow_up_reason }}
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <div class="signature">
         <div class="sign-line"></div>
-        <div style="font-size: 12px; margin-top: 5px;">Dr. Tejas D. Jaiprakash</div>
+        <div style="font-weight: bold; font-size: 12px;">Dr. Tejas D. Jaiprakash</div>
     </div>
 
     <div class="footer">
-        Generated by OneStopMed AI • Not for medico-legal use without physical signature.
+        Generated by OneStopMed AI • This prescription is valid for 30 days from date of issue.
     </div>
 
 </body>

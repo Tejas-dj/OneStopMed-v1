@@ -33,22 +33,18 @@ except FileNotFoundError:
     print("❌ ERROR: drugs.json not found.")
     DRUG_DB = {}
 
-# --- INTELLIGENCE ENGINE V2 (Multi-Search) ---
-
+# --- INTELLIGENCE ENGINE V2 ---
 @app.get("/search")
 def search_drug(q: str = Query(..., min_length=2)):
     if not DRUG_DB:
         raise HTTPException(status_code=500, detail="Database error.")
 
     brands = list(DRUG_DB.keys())
-    
-    # Get Top 5 Matches instead of just 1
-    # limit=5 returns a list of tuples: [('DOLO 650', 90), ('DOLO 500', 85), ...]
     matches = process.extract(q, brands, limit=5)
 
     results = []
     for brand, score in matches:
-        if score > 50: # Only include decent matches
+        if score > 50: 
             results.append({
                 "brand": brand,
                 "generic": DRUG_DB[brand],
@@ -58,39 +54,41 @@ def search_drug(q: str = Query(..., min_length=2)):
     return {
         "query": q,
         "count": len(results),
-        "results": results # Returns a LIST now
+        "results": results 
     }
-# --- NEW: PDF GENERATOR ENDPOINT ---
 
+# --- PDF GENERATOR ENDPOINT ---
 @app.post("/generate_pdf")
 async def generate_pdf(data: dict = Body(...)):
     """
-    Receives prescription data and returns a PDF file.
+    Receives clinical data and returns a PDF file.
     """
-    # 1. Setup Template Engine
     template_dir = BASE_DIR / "backend" / "templates"
     env = Environment(loader=FileSystemLoader(str(template_dir)))
     template = env.get_template("prescription.html")
 
-    # 2. Prepare Data for Template
+    # Capture NEW fields
     context = {
         "patient_name": data.get("patientName", "Unknown"),
         "age": data.get("age", "--"),
         "gender": data.get("gender", "--"),
+        "weight": data.get("weight", "--"),   
+        "bp": data.get("bp", "--"),
+        "allergies": data.get("allergies", "NKDA"), # NEW           
+        "diagnosis": data.get("diagnosis", ""), 
+        "follow_up_date": data.get("followUpDate", ""),
+        "follow_up_reason": data.get("followUpReason", ""),
         "date": datetime.now().strftime("%d-%b-%Y"),
-        "visit_id": datetime.now().strftime("%H%M%S"), # Simple ID based on time
+        "visit_id": datetime.now().strftime("%H%M%S"),
         "medicines": data.get("medicines", [])
     }
 
-    # 3. Render HTML with Data
     html_content = template.render(context)
 
-    # 4. Convert HTML to PDF (In-Memory)
     pdf_file = io.BytesIO()
     HTML(string=html_content).write_pdf(pdf_file)
     pdf_file.seek(0)
 
-    # 5. Return as Downloadable File
     return StreamingResponse(
         pdf_file,
         media_type="application/pdf",
