@@ -8,6 +8,18 @@ from pathlib import Path
 import json
 import io
 from datetime import datetime
+from supabase import create_client, Client
+
+
+# --- SUPABASE CONFIG ---
+# 1. Paste your "Project URL" here (Same as frontend)
+SUPABASE_URL = "https://nplxmgrnkhffutppkqrx.supabase.co"
+
+# 2. Paste your "service_role secret" key here (NOT the anon key!)
+# We use the secret key so the backend has full permission to write data.
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5wbHhtZ3Jua2hmZnV0cHBrcXJ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDgwMDA5MywiZXhwIjoyMDg2Mzc2MDkzfQ.FJdqOleoAscQUUWJPcKmu0_Emma3m75IXgjvwxNDMUM" 
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
 
 app = FastAPI()
 
