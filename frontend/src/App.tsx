@@ -1,10 +1,18 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import type { Session } from "@supabase/supabase-js"; // Added 'type' keyword here
+import { supabase } from "./supabaseClient";
+import Login from "./Login";
 import axios from "axios";
-import { Plus, Trash2, FileDown, Search, Loader2, Activity, CalendarClock, AlertCircle } from "lucide-react";
+import { 
+  Plus, Trash2, FileDown, Search, Loader2, Activity, 
+  CalendarClock, AlertCircle 
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  Card, CardContent, CardHeader, CardTitle 
+} from "@/components/ui/card";
 
 
 // --- TYPES ---
@@ -29,6 +37,35 @@ interface Medicine {
 }
 
 export default function App() {
+
+  // --- BOUNCER LOGIC START ---
+  const [session, setSession] = useState<Session | null>(null);
+  const [loadingSession, setLoadingSession] = useState(true);
+
+  useEffect(() => {
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoadingSession(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // 1. While checking, show a simple loading screen
+  if (loadingSession) return <div className="h-screen bg-slate-900 flex items-center justify-center text-white">Loading...</div>;
+
+  // 2. If NO session, show the Login screen instead of the Dashboard
+  if (!session) {
+    return <Login />;
+  }
+  // --- BOUNCER LOGIC END ---
+
   // --- PATIENT STATE ---
   const [patientName, setPatientName] = useState("");
   const [age, setAge] = useState("");
@@ -41,7 +78,7 @@ export default function App() {
 
   const [allergies, setAllergies] = useState("NKDA (No Known Drug Allergies)");
   const [diagnosis, setDiagnosis] = useState(""); 
-   
+  
   // --- FOLLOW UP STATE ---
   const [followUpDate, setFollowUpDate] = useState("");
   const [followUpReason, setFollowUpReason] = useState("");

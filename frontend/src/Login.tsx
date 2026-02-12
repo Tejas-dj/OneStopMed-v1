@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { supabase } from "./supabaseClient";
+import { Loader2, Lock } from "lucide-react"; 
+// DJ: If you don't have lucide-react, run: npm install lucide-react
+// Or just remove the Icon components if you want to move fast.
 
 export default function Login() {
 const [email, setEmail] = useState("");
@@ -21,8 +24,8 @@ const handleLogin = async (e: React.FormEvent) => {
     setError(error.message);
     setLoading(false);
     } 
-    // If successful, Supabase automatically updates the session, 
-    // and App.tsx will notice the change and let you in.
+    // If successful, Supabase updates the session automatically.
+    // App.tsx will detect this and switch screens.
 };
 
 return (
@@ -40,7 +43,8 @@ return (
             type="email" 
             value={email} 
             onChange={(e) => setEmail(e.target.value)} 
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border"
+            placeholder="doctor@example.com"
             required
             />
         </div>
@@ -50,23 +54,24 @@ return (
             type="password" 
             value={password} 
             onChange={(e) => setPassword(e.target.value)} 
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3 border"
+            placeholder="••••••••"
             required
             />
         </div>
 
         {error && (
-            <div className="p-3 bg-red-50 text-red-600 text-sm rounded-md">
-            ⚠️ {error}
+            <div className="p-3 bg-red-50 text-red-600 text-sm rounded-md flex items-center gap-2">
+            <Lock className="h-4 w-4" /> {error}
             </div>
         )}
 
         <button 
             type="submit" 
             disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none disabled:opacity-50"
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none disabled:opacity-50 transition-all"
         >
-            {loading ? "Verifying..." : "Secure Login"}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Secure Login"}
         </button>
         </form>
     </div>
