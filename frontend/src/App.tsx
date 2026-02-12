@@ -37,33 +37,49 @@ interface Medicine {
 }
 
 export default function App() {
-
   // --- BOUNCER LOGIC START ---
+  
+  // 1. Auth State
   const [session, setSession] = useState<Session | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
 
   useEffect(() => {
-    // Check active session
+    // Check for active session on load
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoadingSession(false);
     });
 
-    // Listen for auth changes
+    // Listen for changes (Login/Logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      setLoadingSession(false); // Failsafe to stop loading
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // 1. While checking, show a simple loading screen
-  if (loadingSession) return <div className="h-screen bg-slate-900 flex items-center justify-center text-white">Loading...</div>;
+  // 2. Loading Screen (While verifying)
+  if (loadingSession) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-slate-900 text-white">
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
+          <p className="text-xs uppercase tracking-widest text-slate-500">Verifying...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // 2. If NO session, show the Login screen instead of the Dashboard
+  // 3. Login Screen (If no user found)
   if (!session) {
     return <Login />;
   }
+
+  // 4. Success Check
+  // Open your Browser Console (F12). If you see this, the Bouncer is working.
+  console.log("✅ Authenticated as:", session.user.email);
+
   // --- BOUNCER LOGIC END ---
 
   // --- PATIENT STATE ---
