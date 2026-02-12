@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import type { Session } from "@supabase/supabase-js"; // Added 'type' keyword here
+import type { Session } from "@supabase/supabase-js"; 
 import { supabase } from "./supabaseClient";
 import Login from "./Login";
 import axios from "axios";
 import { 
   Plus, Trash2, FileDown, Search, Loader2, Activity, 
-  CalendarClock, AlertCircle 
+  CalendarClock, AlertCircle, LogOut 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { 
   Card, CardContent, CardHeader, CardTitle 
 } from "@/components/ui/card";
-
 
 // --- TYPES ---
 interface DrugSuggestion {
@@ -33,54 +32,17 @@ interface Medicine {
   remarks: string;
   suggestions: DrugSuggestion[];
   showSuggestions: boolean;
-  activeSuggestionIndex: number; // NEW: Tracks keyboard selection
+  activeSuggestionIndex: number;
 }
 
 export default function App() {
-  // --- BOUNCER LOGIC START ---
-  
-  // 1. Auth State
+  // ---------------------------------------------------------
+  // 1. DECLARE ALL STATE VARIABLES FIRST (NO RETURNS YET!)
+  // ---------------------------------------------------------
+
+  // --- AUTH STATE ---
   const [session, setSession] = useState<Session | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
-
-  useEffect(() => {
-    // Check for active session on load
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoadingSession(false);
-    });
-
-    // Listen for changes (Login/Logout)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoadingSession(false); // Failsafe to stop loading
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // 2. Loading Screen (While verifying)
-  if (loadingSession) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-slate-900 text-white">
-        <div className="flex flex-col items-center gap-2">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
-          <p className="text-xs uppercase tracking-widest text-slate-500">Verifying...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // 3. Login Screen (If no user found)
-  if (!session) {
-    return <Login />;
-  }
-
-  // 4. Success Check
-  // Open your Browser Console (F12). If you see this, the Bouncer is working.
-  console.log("✅ Authenticated as:", session.user.email);
-
-  // --- BOUNCER LOGIC END ---
 
   // --- PATIENT STATE ---
   const [patientName, setPatientName] = useState("");
@@ -88,19 +50,18 @@ export default function App() {
   const [gender, setGender] = useState("Male");
   const [weight, setWeight] = useState(""); 
   
-  // BP STATE & VALIDATION
+  // --- BP STATE ---
   const [bp, setBp] = useState("");          
   const [bpError, setBpError] = useState(false);
 
+  // --- DIAGNOSIS & FOLLOW UP ---
   const [allergies, setAllergies] = useState("NKDA (No Known Drug Allergies)");
   const [diagnosis, setDiagnosis] = useState(""); 
-  
-  // --- FOLLOW UP STATE ---
   const [followUpDate, setFollowUpDate] = useState("");
   const [followUpReason, setFollowUpReason] = useState("");
-
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // --- MEDICINES STATE ---
   const [medicines, setMedicines] = useState<Medicine[]>([
     { 
       id: 1, 
@@ -113,11 +74,30 @@ export default function App() {
       remarks: "", 
       suggestions: [], 
       showSuggestions: false,
-      activeSuggestionIndex: -1 // Default: No selection
+      activeSuggestionIndex: -1 
     },
   ]);
 
-  // --- CLICK OUTSIDE TO CLOSE DROPDOWNS ---
+  // ---------------------------------------------------------
+  // 2. DEFINE EFFECTS (STILL NO RETURNS!)
+  // ---------------------------------------------------------
+
+  // Auth Listener
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoadingSession(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setLoadingSession(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Click Outside Listener
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if ((event.target as HTMLElement).closest(".suggestion-box")) return;
@@ -126,6 +106,10 @@ export default function App() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // ---------------------------------------------------------
+  // 3. DEFINE HANDLER FUNCTIONS
+  // ---------------------------------------------------------
 
   const addRow = () => {
     setMedicines([
@@ -150,7 +134,6 @@ export default function App() {
     setMedicines(medicines.filter((med) => med.id !== id));
   };
 
-  // --- BP HANDLER ---
   const handleBpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = e.target.value;
     val = val.replace(" ", "/");
@@ -171,7 +154,6 @@ export default function App() {
     }
   };
 
-  // --- DRUG SEARCH HANDLER ---
   const handleDrugInput = async (id: number, value: string) => {
     setMedicines((prev) =>
       prev.map((med) =>
@@ -206,7 +188,6 @@ export default function App() {
     }
   };
 
-  // --- KEYBOARD NAVIGATION (NEW) ---
   const handleKeyDown = (id: number, e: React.KeyboardEvent) => {
     const med = medicines.find(m => m.id === id);
     if (!med || !med.showSuggestions || med.suggestions.length === 0) return;
@@ -252,8 +233,8 @@ export default function App() {
     );
   };
 
-  // --- PDF GENERATION ---
   const handleGeneratePDF = async () => {
+    if (!session) return; // Double check safety
     setIsGenerating(true);
     try {
       const payload = {
@@ -277,8 +258,12 @@ export default function App() {
         }))
       };
 
+      // Pass the Token in the Header
       const response = await axios.post("https://onestopmed-v1-api.onrender.com/generate_pdf", payload, {
         responseType: 'blob',
+        headers: {
+            Authorization: `Bearer ${session.access_token}`
+        }
       });
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -299,6 +284,28 @@ export default function App() {
 
   const selectClass = "flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
+  // ---------------------------------------------------------
+  // 4. NOW WE CAN DO THE CONDITIONAL RENDERING (THE BOUNCER)
+  // ---------------------------------------------------------
+
+  if (loadingSession) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-slate-900 text-white">
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
+          <p className="text-xs uppercase tracking-widest text-slate-500">Verifying...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Login />;
+  }
+
+  // ---------------------------------------------------------
+  // 5. MAIN DASHBOARD RENDER (Logged In)
+  // ---------------------------------------------------------
   return (
     <div className="min-h-screen bg-slate-50 p-8 font-sans">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -309,11 +316,21 @@ export default function App() {
                 <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 tracking-tight">
                 OneStopMed ⚡
                 </h1>
-                <p className="text-slate-400 font-mono text-sm mt-1">v1.6 // Keyboard Pro</p>
+                <p className="text-slate-400 font-mono text-sm mt-1">v1.6 // Clinical Workstation</p>
             </div>
-            <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white">
-                Dr. Tejas
-            </Button>
+            <div className="flex items-center gap-4">
+                 <div className="text-right hidden md:block">
+                    <p className="text-xs text-slate-400 font-bold uppercase">Logged in as</p>
+                    <p className="text-sm text-white font-mono">{session.user.email}</p>
+                </div>
+                <Button 
+                    variant="ghost" 
+                    className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                    onClick={() => supabase.auth.signOut()}
+                >
+                    <LogOut className="h-5 w-5" />
+                </Button>
+            </div>
         </div>
 
         {/* SECTION 1: VITALS & DIAGNOSIS */}
@@ -352,9 +369,8 @@ export default function App() {
               <Input placeholder="70" value={weight} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setWeight(e.target.value)}/>
             </div>
             
-            {/* UPDATED: BP with Logic */}
             <div className="md:col-span-2 space-y-2">
-               <label className="text-xs font-bold uppercase text-slate-500 tracking-wider text-emerald-600">BP (mmHg)</label>
+                <label className="text-xs font-bold uppercase text-slate-500 tracking-wider text-emerald-600">BP (mmHg)</label>
               <Input 
                 placeholder="120 80" 
                 value={bp} 
@@ -364,7 +380,6 @@ export default function App() {
               {bpError && <span className="text-[10px] text-red-500 font-bold">Check Value!</span>}
             </div>
 
-             {/* NEW: Allergies Row */}
              <div className="md:col-span-12 space-y-2">
               <label className="text-xs font-bold uppercase text-red-600 tracking-wider flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" /> Known Allergies
@@ -424,7 +439,7 @@ export default function App() {
                           placeholder="Search..."
                           value={med.name}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleDrugInput(med.id, e.target.value)}
-                          onKeyDown={(e) => handleKeyDown(med.id, e)} // NEW KEYBOARD HANDLER
+                          onKeyDown={(e) => handleKeyDown(med.id, e)} 
                           autoComplete="off"
                         />
                       </div>
@@ -435,15 +450,13 @@ export default function App() {
                           {med.suggestions.map((suggestion, idx) => (
                             <div 
                               key={idx}
-                              // NEW: Conditional Styling for Keyboard Highlight
                               className={`p-3 cursor-pointer border-b last:border-0 transition-colors ${
                                   idx === med.activeSuggestionIndex 
-                                  ? "bg-blue-100 border-l-4 border-l-blue-500" // Highlight Style
+                                  ? "bg-blue-100 border-l-4 border-l-blue-500" 
                                   : "hover:bg-blue-50"
                               }`}
                               onClick={() => selectDrug(med.id, suggestion)}
                               onMouseEnter={() => {
-                                  // Sync mouse hover with state
                                   setMedicines(prev => prev.map(m => m.id === med.id ? {...m, activeSuggestionIndex: idx} : m));
                               }}
                             >
