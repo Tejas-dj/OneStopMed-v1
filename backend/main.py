@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Query, HTTPException, Body
+import os
+from fastapi import FastAPI, Query, HTTPException, Body, Depends, Header
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from jinja2 import Environment, FileSystemLoader
@@ -10,20 +11,13 @@ import io
 from datetime import datetime
 from supabase import create_client, Client
 
-
 # --- SUPABASE CONFIG ---
-# 1. Paste your "Project URL" here (Same as frontend)
 SUPABASE_URL = "https://nplxmgrnkhffutppkqrx.supabase.co"
-
-# 2. Paste your "service_role secret" key here (NOT the anon key!)
-# We use the secret key so the backend has full permission to write data.
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5wbHhtZ3Jua2hmZnV0cHBrcXJ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDgwMDA5MywiZXhwIjoyMDg2Mzc2MDkzfQ.FJdqOleoAscQUUWJPcKmu0_Emma3m75IXgjvwxNDMUM" 
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5wbHhtZ3Jua2hmZnV0cHBrcXJ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDgwMDA5MywiZXhwIjoyMDg2Mzc2MDkzfQ.FJdqOleoAscQUUWJPcKmu0_Emma3m75IXgjvwxNDMUM"
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
 
 app = FastAPI()
 
-# --- CONFIGURATION ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,12 +26,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- ROBUST DATA LOADING (Smart Search) ---
+# --- ROBUST DATA LOADING ---
 BASE_DIR = Path(__file__).resolve().parent
 possible_paths = [
-    BASE_DIR / "data" / "drugs.json",  # Priority 1: backend/data/drugs.json
-    BASE_DIR / "drugs.json",           # Priority 2: backend/drugs.json
-    Path("data/drugs.json"),           # Priority 3: Relative path from CWD
+    BASE_DIR / "data" / "drugs.json",
+    BASE_DIR / "drugs.json",
+    Path("data/drugs.json"),
 ]
 
 DRUG_DB = {}
@@ -47,11 +41,10 @@ print(f"🔍 Looking for database... (Base: {BASE_DIR})")
 
 for path in possible_paths:
     if path.exists():
-        print(f"✅ FOUND Database at: {path}")
         try:
             with open(path, "r") as f:
                 DRUG_DB = json.load(f)
-            print(f"✅ Loaded {len(DRUG_DB)} drugs.")
+            print(f"✅ Loaded {len(DRUG_DB)} drugs from {path}")
             found = True
             break
         except Exception as e:
@@ -59,45 +52,76 @@ for path in possible_paths:
 
 if not found:
     print("❌ CRITICAL: drugs.json NOT FOUND.")
-    # Debug: List files so we can see where we are in the environment
-    try:
-        print(f"📂 Files in {BASE_DIR}: {[p.name for p in BASE_DIR.iterdir()]}")
-        if (BASE_DIR / "data").exists():
-            print(f"📂 Files in /data: {[p.name for p in (BASE_DIR / 'data').iterdir()]}")
-    except Exception as e:
-        print(f"⚠️ Could not list directory: {e}")
 
-# --- INTELLIGENCE ENGINE V2 ---
+# --- AUTH HELPER (MISSING IN YOUR CODE) ---
+async def get_current_user(authorization: str = Header(None)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Token")
+    
+    try:
+        token = authorization.split(" ")[1] # Remove "Bearer "
+        user = supabase.auth.get_user(token)
+        return user.user
+    except Exception as e:
+        print(f"Auth Error: {e}")
+        raise HTTPException(status_code=401, detail="Invalid Token")
+
+# --- SEARCH ENDPOINT ---
 @app.get("/search")
 def search_drug(q: str = Query(..., min_length=2)):
     if not DRUG_DB:
-        raise HTTPException(status_code=500, detail="Database error: drugs.json not loaded.")
-
+        raise HTTPException(status_code=500, detail="Database error.")
+    
     brands = list(DRUG_DB.keys())
     matches = process.extract(q, brands, limit=5)
-
+    
     results = []
     for brand, score in matches:
-        if score > 50: 
+        if score > 50:
             results.append({
                 "brand": brand,
                 "generic": DRUG_DB[brand],
                 "confidence": score
             })
+            
+    return {"query": q, "results": results}
 
-    return {
-        "query": q,
-        "count": len(results),
-        "results": results 
-    }
-
-# --- PDF GENERATOR ENDPOINT ---
+# --- PDF GENERATOR + SAVE ---
 @app.post("/generate_pdf")
-async def generate_pdf(data: dict = Body(...)):
-    """
-    Receives clinical data and returns a PDF file.
-    """
-    # Since BASE_DIR is now /backend, we point directly to /templates
+async def generate_pdf(
+    data: dict = Body(...),
+    user = Depends(get_current_user)
+):
+    # 1. PREPARE SUMMARY
+    meds_list = data.get("medicines", [])
+    meds_summary = ", ".join([f"{m.get('name')} ({m.get('frequency')})" for m in meds_list if m.get('name')])
+
+    # 2. SAVE TO DATABASE
+    try:
+        print(f"📝 Saving record for Dr. {user.email}...")
+        
+        prescription_record = {
+            "doctor_id": user.id,
+            "patient_name": data.get("patientName", "Unknown"),
+            "age": data.get("age", ""),
+            "gender": data.get("gender", ""),
+            "weight": data.get("weight", ""),
+            "bp": data.get("bp", ""),
+            "allergies": data.get("allergies", ""),
+            "diagnosis": data.get("diagnosis", ""),
+            "follow_up_date": data.get("followUpDate", ""),
+            "follow_up_reason": data.get("followUpReason", ""),
+            "medicines_summary": meds_summary,
+            "full_data": data 
+        }
+        
+        supabase.table("prescriptions").insert(prescription_record).execute()
+        print("✅ Prescription saved to Supabase!")
+        
+    except Exception as e:
+        print(f"⚠️ DATABASE ERROR: {e}")
+
+    # 3. GENERATE PDF
     template_dir = BASE_DIR / "templates"
     
     try:
@@ -105,7 +129,7 @@ async def generate_pdf(data: dict = Body(...)):
         template = env.get_template("prescription.html")
     except Exception as e:
         print(f"❌ Template Error: {e}")
-        raise HTTPException(status_code=500, detail="HTML Template not found.")
+        raise HTTPException(status_code=500, detail="Template missing.")
 
     context = {
         "patient_name": data.get("patientName", "Unknown"),
@@ -118,12 +142,10 @@ async def generate_pdf(data: dict = Body(...)):
         "follow_up_date": data.get("followUpDate", ""),
         "follow_up_reason": data.get("followUpReason", ""),
         "date": datetime.now().strftime("%d-%b-%Y"),
-        "visit_id": datetime.now().strftime("%H%M%S"),
         "medicines": data.get("medicines", [])
     }
 
     html_content = template.render(context)
-
     pdf_file = io.BytesIO()
     HTML(string=html_content).write_pdf(pdf_file)
     pdf_file.seek(0)
