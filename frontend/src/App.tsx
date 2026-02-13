@@ -52,7 +52,7 @@ export default function App() {
   const [patientName, setPatientName] = useState("");
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("Male");
-  const [weight, setWeight] = useState(""); 
+  const [weight, setWeight] = useState("-"); 
   
   // --- CHRONIC CONDITIONS ---
   const [isHypertensive, setIsHypertensive] = useState(false);
@@ -377,35 +377,54 @@ export default function App() {
         </div>
 
         {/* SECTION 1: VITALS & DIAGNOSIS */}
-        <Card className="shadow-sm border-slate-200">
-          <CardHeader className="bg-slate-100/50 pb-4 flex flex-row items-center gap-2">
-            <Activity className="h-5 w-5 text-blue-600"/>
-            <CardTitle className="text-lg text-slate-700">Clinical Vitals & Diagnosis</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-12 gap-4">
-            
-            <div className="md:col-span-3 space-y-2">
-              <label className="text-xs font-bold uppercase text-slate-500 tracking-wider">Full Name</label>
-              <Input placeholder="Patient Name" value={patientName} onChange={(e) => setPatientName(e.target.value)}/>
-            </div>
-            
-            <div className="md:col-span-1 space-y-2">
-              <label className="text-xs font-bold uppercase text-slate-500 tracking-wider">Age</label>
-              <Input placeholder="45" value={age} onChange={(e) => setAge(e.target.value)}/>
-            </div>
-            
-            <div className="md:col-span-2 space-y-2">
-              <label className="text-xs font-bold uppercase text-slate-500 tracking-wider">Gender</label>
-              <select 
-                className={selectClass}
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-              >
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
+<Card className="shadow-sm border-slate-200">
+  <CardHeader className="bg-slate-100/50 pb-4 flex flex-row items-center gap-2">
+    <Activity className="h-5 w-5 text-blue-600"/>
+    <CardTitle className="text-lg text-slate-700">Clinical Vitals & Diagnosis</CardTitle>
+  </CardHeader>
+  <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-12 gap-4">
+    
+    <div className="md:col-span-3 space-y-2">
+      <label className="text-xs font-bold uppercase text-slate-500 tracking-wider">Full Name</label>
+      <Input 
+        placeholder="Patient Name" 
+        value={patientName} 
+        onChange={(e) => setPatientName(e.target.value)}
+      />
+    </div>
+    
+    <div className="md:col-span-1 space-y-2">
+      <label className="text-xs font-bold uppercase text-slate-500 tracking-wider">Age</label>
+      <Input 
+        placeholder="45" 
+        value={age} 
+        onChange={(e) => setAge(e.target.value)}
+      />
+    </div>
+    
+    <div className="md:col-span-2 space-y-2">
+      <label className="text-xs font-bold uppercase text-slate-500 tracking-wider">Gender</label>
+      <select 
+        className={selectClass}
+        value={gender}
+        onChange={(e) => setGender(e.target.value)}
+      >
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    {/* New Weight Input */}
+    <div className="md:col-span-2 space-y-2">
+      <label className="text-xs font-bold uppercase text-slate-500 tracking-wider">Weight (kg)</label>
+      <Input 
+        type="number"
+        placeholder="60" 
+        value={weight} 
+        onChange={(e) => setWeight(e.target.value)}
+      />
+    </div>
 
             {/* --- NEW: CHRONIC CONDITION TOGGLES --- */}
             <div className="md:col-span-4 flex items-center justify-around pb-1 space-x-2">
