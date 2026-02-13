@@ -2,10 +2,12 @@ import React, { useState, useEffect } from "react";
 import type { Session } from "@supabase/supabase-js"; 
 import { supabase } from "./supabaseClient";
 import Login from "./Login";
+import Register from "./Register"; 
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import axios from "axios";
 import { 
   Plus, Trash2, FileDown, Search, Loader2, Activity, 
-  CalendarClock, AlertCircle, LogOut 
+  CalendarClock, AlertCircle, LogOut, CheckSquare, Square 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +20,7 @@ import {
 interface DrugSuggestion {
   brand: string;
   generic: string;
+  type: string; 
   confidence: number;
 }
 
@@ -25,6 +28,7 @@ interface Medicine {
   id: number;
   name: string;
   generic: string;
+  type: string; 
   dosage: string;
   frequency: string;
   duration: string; 
@@ -37,7 +41,7 @@ interface Medicine {
 
 export default function App() {
   // ---------------------------------------------------------
-  // 1. DECLARE ALL STATE VARIABLES FIRST (NO RETURNS YET!)
+  // 1. DECLARE ALL STATE VARIABLES
   // ---------------------------------------------------------
 
   // --- AUTH STATE ---
@@ -50,6 +54,10 @@ export default function App() {
   const [gender, setGender] = useState("Male");
   const [weight, setWeight] = useState(""); 
   
+  // --- CHRONIC CONDITIONS ---
+  const [isHypertensive, setIsHypertensive] = useState(false);
+  const [isDiabetic, setIsDiabetic] = useState(false);
+
   // --- BP STATE ---
   const [bp, setBp] = useState("");          
   const [bpError, setBpError] = useState(false);
@@ -67,6 +75,7 @@ export default function App() {
       id: 1, 
       name: "", 
       generic: "---", 
+      type: "Tablet", // Default type
       dosage: "1 Tablet", 
       frequency: "1-0-1", 
       duration: "5", 
@@ -79,7 +88,7 @@ export default function App() {
   ]);
 
   // ---------------------------------------------------------
-  // 2. DEFINE EFFECTS (STILL NO RETURNS!)
+  // 2. DEFINE EFFECTS
   // ---------------------------------------------------------
 
   // Auth Listener
@@ -118,6 +127,7 @@ export default function App() {
         id: medicines.length + 1,
         name: "",
         generic: "---",
+        type: "Tablet",
         dosage: "1 Tablet",
         frequency: "1-0-1",
         duration: "3",
@@ -173,7 +183,8 @@ export default function App() {
     }
 
     try {
-      const response = await axios.get(`https://onestopmed-v1-api.onrender.com/search?q=${value}`);
+      // USING LOCALHOST (Since this is where your updated backend is running)
+      const response = await axios.get(`http://127.0.0.1:8000/search?q=${value}`);
       if (response.data.results && response.data.results.length > 0) {
         setMedicines((prev) =>
           prev.map((med) =>
@@ -217,14 +228,35 @@ export default function App() {
   };
 
   const selectDrug = (id: number, suggestion: DrugSuggestion) => {
+    // 1. Get Type & Normalize (Capitalize first letter: "syrup" -> "Syrup")
+    const rawType = suggestion.type || "Tablet";
+    const medType = rawType.charAt(0).toUpperCase() + rawType.slice(1).toLowerCase();
+
+    // 2. Intelligent Dosing Defaults
+    let defaultDosage = "1 Tablet";
+
+    const liquidTypes = ["Syrup", "Suspension", "Solution", "Liquid", "Linctus", "Elixir"];
+    const dropTypes = ["Drops", "Eye Drops", "Ear Drops"];
+    const topicalTypes = ["Gel", "Cream", "Ointment", "Lotion", "Spray"];
+    const injectables = ["Injection", "Iv", "Infusion"];
+
+    if (liquidTypes.includes(medType)) defaultDosage = "5ml";
+    else if (dropTypes.includes(medType)) defaultDosage = "0.5ml";
+    else if (topicalTypes.includes(medType)) defaultDosage = "Apply Locally";
+    else if (injectables.includes(medType)) defaultDosage = "2ml";
+    else if (medType === "Capsule") defaultDosage = "1 Capsule";
+    else if (medType === "Sachet") defaultDosage = "1 Sachet";
+
     setMedicines((prev) =>
       prev.map((med) =>
         med.id === id
           ? {
               ...med,
-              name: suggestion.brand,      
-              generic: suggestion.generic, 
-              showSuggestions: false,       
+              name: suggestion.brand,
+              generic: suggestion.generic,
+              type: medType,         
+              dosage: defaultDosage, 
+              showSuggestions: false,
               suggestions: [],
               activeSuggestionIndex: -1
             }
@@ -234,7 +266,7 @@ export default function App() {
   };
 
   const handleGeneratePDF = async () => {
-    if (!session) return; // Double check safety
+    if (!session) return; 
     setIsGenerating(true);
     try {
       const payload = {
@@ -243,6 +275,8 @@ export default function App() {
         gender,
         weight,      
         bp,
+        isHypertensive, 
+        isDiabetic,    
         allergies,      
         diagnosis,
         followUpDate,   
@@ -250,6 +284,7 @@ export default function App() {
         medicines: medicines.map(m => ({
             name: m.name,
             generic: m.generic,
+            type: m.type, 
             dosage: m.dosage, 
             frequency: m.frequency,
             duration: m.duration ? `${m.duration} Days` : "",
@@ -258,8 +293,8 @@ export default function App() {
         }))
       };
 
-      // Pass the Token in the Header
-      const response = await axios.post("https://onestopmed-v1-api.onrender.com/generate_pdf", payload, {
+      // USING LOCALHOST
+      const response = await axios.post("http://127.0.0.1:8000/generate_pdf", payload, {
         responseType: 'blob',
         headers: {
             Authorization: `Bearer ${session.access_token}`
@@ -285,7 +320,7 @@ export default function App() {
   const selectClass = "flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
   // ---------------------------------------------------------
-  // 4. NOW WE CAN DO THE CONDITIONAL RENDERING (THE BOUNCER)
+  // 4. THE BOUNCER (CONDITIONAL RENDERING)
   // ---------------------------------------------------------
 
   if (loadingSession) {
@@ -300,7 +335,15 @@ export default function App() {
   }
 
   if (!session) {
-    return <Login />;
+    return (
+      <Router>
+        <Routes>
+          <Route path="/register" element={<Register />} />
+          <Route path="/" element={<Login />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    );
   }
 
   // ---------------------------------------------------------
@@ -316,7 +359,7 @@ export default function App() {
                 <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 tracking-tight">
                 OneStopMed ⚡
                 </h1>
-                <p className="text-slate-400 font-mono text-sm mt-1">v1.6 // Clinical Workstation</p>
+                <p className="text-slate-400 font-mono text-sm mt-1">v2.0 // Intelligent Clinical Workstation</p>
             </div>
             <div className="flex items-center gap-4">
                  <div className="text-right hidden md:block">
@@ -343,12 +386,12 @@ export default function App() {
             
             <div className="md:col-span-3 space-y-2">
               <label className="text-xs font-bold uppercase text-slate-500 tracking-wider">Full Name</label>
-              <Input placeholder="Patient Name" value={patientName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPatientName(e.target.value)}/>
+              <Input placeholder="Patient Name" value={patientName} onChange={(e) => setPatientName(e.target.value)}/>
             </div>
             
             <div className="md:col-span-1 space-y-2">
               <label className="text-xs font-bold uppercase text-slate-500 tracking-wider">Age</label>
-              <Input placeholder="45" value={age} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAge(e.target.value)}/>
+              <Input placeholder="45" value={age} onChange={(e) => setAge(e.target.value)}/>
             </div>
             
             <div className="md:col-span-2 space-y-2">
@@ -356,21 +399,37 @@ export default function App() {
               <select 
                 className={selectClass}
                 value={gender}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setGender(e.target.value)}
+                onChange={(e) => setGender(e.target.value)}
               >
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
                 <option value="Other">Other</option>
               </select>
             </div>
-            
-            <div className="md:col-span-2 space-y-2">
-              <label className="text-xs font-bold uppercase text-slate-500 tracking-wider text-emerald-600">Weight (kg)</label>
-              <Input placeholder="70" value={weight} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setWeight(e.target.value)}/>
+
+            {/* --- NEW: CHRONIC CONDITION TOGGLES --- */}
+            <div className="md:col-span-4 flex items-center justify-around pb-1 space-x-2">
+               {/* Hypertension Toggle */}
+               <div 
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer transition-all w-full ${isHypertensive ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-white border-slate-200'}`}
+                  onClick={() => setIsHypertensive(!isHypertensive)}
+               >
+                  {isHypertensive ? <CheckSquare className="h-4 w-4 text-red-600"/> : <Square className="h-4 w-4 text-slate-300"/>}
+                  <span className={`text-xs font-bold uppercase tracking-wider ${isHypertensive ? 'text-red-700' : 'text-slate-500'}`}>Hypertension</span>
+               </div>
+
+               {/* Diabetes Toggle */}
+               <div 
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer transition-all w-full ${isDiabetic ? 'bg-orange-50 border-orange-200 shadow-sm' : 'bg-white border-slate-200'}`}
+                  onClick={() => setIsDiabetic(!isDiabetic)}
+               >
+                  {isDiabetic ? <CheckSquare className="h-4 w-4 text-orange-600"/> : <Square className="h-4 w-4 text-slate-300"/>}
+                  <span className={`text-xs font-bold uppercase tracking-wider ${isDiabetic ? 'text-orange-700' : 'text-slate-500'}`}>Diabetes</span>
+               </div>
             </div>
             
             <div className="md:col-span-2 space-y-2">
-                <label className="text-xs font-bold uppercase text-slate-500 tracking-wider text-emerald-600">BP (mmHg)</label>
+               <label className="text-xs font-bold uppercase text-slate-500 tracking-wider text-emerald-600">BP (mmHg)</label>
               <Input 
                 placeholder="120 80" 
                 value={bp} 
@@ -386,7 +445,7 @@ export default function App() {
               </label>
               <Input 
                 value={allergies} 
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAllergies(e.target.value)}
+                onChange={(e) => setAllergies(e.target.value)}
                 className="border-red-200 text-red-700 font-semibold focus-visible:ring-red-500 bg-red-50/30"
               />
             </div>
@@ -397,7 +456,7 @@ export default function App() {
                 placeholder="Ex: Acute Pharyngitis, Fever (3 days)..." 
                 className="resize-none"
                 value={diagnosis}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDiagnosis(e.target.value)}
+                onChange={(e) => setDiagnosis(e.target.value)}
               />
             </div>
           </CardContent>
@@ -417,9 +476,10 @@ export default function App() {
             <div className="grid grid-cols-12 gap-4 mb-4 text-xs font-bold uppercase text-slate-500 border-b pb-2 tracking-wider">
               <div className="col-span-3">Medicine (Brand)</div>
               <div className="col-span-2">Generic</div>
+              <div className="col-span-1 text-center">Type</div> 
               <div className="col-span-2">Dosage</div>
               <div className="col-span-1">Freq</div>
-              <div className="col-span-2">Timing</div>
+              <div className="col-span-1">Time</div>
               <div className="col-span-1">Dur</div>
               <div className="col-span-1 text-center">Action</div>
             </div>
@@ -438,7 +498,7 @@ export default function App() {
                           className="pl-8 font-bold text-slate-800"
                           placeholder="Search..."
                           value={med.name}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleDrugInput(med.id, e.target.value)}
+                          onChange={(e) => handleDrugInput(med.id, e.target.value)}
                           onKeyDown={(e) => handleKeyDown(med.id, e)} 
                           autoComplete="off"
                         />
@@ -460,7 +520,10 @@ export default function App() {
                                   setMedicines(prev => prev.map(m => m.id === med.id ? {...m, activeSuggestionIndex: idx} : m));
                               }}
                             >
-                              <div className="font-bold text-slate-800">{suggestion.brand}</div>
+                              <div className="flex justify-between items-center">
+                                <span className="font-bold text-slate-800">{suggestion.brand}</span>
+                                <span className="text-[10px] bg-slate-200 px-1 rounded text-slate-600">{suggestion.type || "Tab"}</span>
+                              </div>
                               <div className="text-xs text-blue-600 font-mono">{suggestion.generic}</div>
                             </div>
                           ))}
@@ -473,24 +536,48 @@ export default function App() {
                       {med.generic}
                     </div>
 
-                    {/* Dosage Options */}
+                    {/* Type Badge */}
+                    <div className="col-span-1 pt-2 flex justify-center">
+                        <span className="text-[10px] font-bold uppercase text-slate-500 bg-slate-200 px-2 py-1 rounded">
+                            {med.type}
+                        </span>
+                    </div>
+
+                    {/* Dosage Options (INTELLIGENT) */}
                     <div className="col-span-2">
-                        <select 
-                        className={selectClass}
-                        value={med.dosage}
-                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                            const newMeds = medicines.map(m => m.id === med.id ? {...m, dosage: e.target.value} : m);
-                            setMedicines(newMeds);
-                        }}
-                        >
-                          <option value="1 Tablet">1 Tablet</option>
-                          <option value="1/2 Tablet">1/2 (Half)</option>
-                          <option value="1/4 Tablet">1/4 (Quarter)</option>
-                          <option value="3/4 Tablet">3/4 (Three Qtr)</option>
-                          <option value="1 & 1/4 Tablet">1 & 1/4 Tablet</option>
-                          <option value="1 & 1/2 Tablet">1 & 1/2 Tablet</option>
-                          <option value="2 Tablets">2 Tablets</option>
-                        </select>
+                        {/* If Syrup/Liquid/Cream -> Show Text Input. If Tablet -> Show Dropdown */}
+                        {["Syrup", "Suspension", "Gel", "Drops", "Cream", "Lotion", "Injection", "Solution", "Liquid", "Ointment", "Spray", "Eye Drops", "Ear Drops"].includes(med.type) ? (
+                            <Input 
+                                value={med.dosage} 
+                                onChange={(e) => {
+                                    const newMeds = medicines.map(m => m.id === med.id ? {...m, dosage: e.target.value} : m);
+                                    setMedicines(newMeds);
+                                }}
+                                className="h-10 text-sm font-semibold text-blue-900"
+                                placeholder="ex: 5ml"
+                            />
+                        ) : (
+                            <select 
+                            className={selectClass}
+                            value={med.dosage}
+                            onChange={(e) => {
+                                const newMeds = medicines.map(m => m.id === med.id ? {...m, dosage: e.target.value} : m);
+                                setMedicines(newMeds);
+                            }}
+                            >
+                            <option value="1 Tablet">1 Tablet</option>
+                            <option value="1/2 Tablet">1/2 (Half)</option>
+                            <option value="1/4 Tablet">1/4 (Quarter)</option>
+                            <option value="3/4 Tablet">3/4 (Three Qtr)</option>
+                            <option value="2 Tablets">2 Tablets</option>
+                            <option value="1 Capsule">1 Capsule</option>
+                            <option value="1 Sachet">1 Sachet</option>
+                            {/* Fallback option to preserve state if switching types */}
+                            {!["1 Tablet", "1/2 Tablet", "1/4 Tablet", "3/4 Tablet", "2 Tablets", "1 Capsule", "1 Sachet"].includes(med.dosage) && (
+                                <option value={med.dosage}>{med.dosage}</option>
+                            )}
+                            </select>
+                        )}
                     </div>
 
                     {/* Frequency */}
@@ -499,7 +586,7 @@ export default function App() {
                         value={med.frequency} 
                         className="text-center font-mono px-1"
                         placeholder="1-0-1"
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        onChange={(e) => {
                             const val = e.target.value.replace(/[^0-9-]/g, '');
                             const newMeds = medicines.map(m => m.id === med.id ? {...m, frequency: val} : m);
                             setMedicines(newMeds);
@@ -508,19 +595,18 @@ export default function App() {
                     </div>
 
                     {/* Timing */}
-                    <div className="col-span-2">
+                    <div className="col-span-1">
                         <select 
-                        className={selectClass}
+                        className={`${selectClass} px-1 text-xs`}
                         value={med.timing}
-                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                        onChange={(e) => {
                             const newMeds = medicines.map(m => m.id === med.id ? {...m, timing: e.target.value} : m);
                             setMedicines(newMeds);
                         }}
                         >
+                          <option value="After Food">A/F</option>
+                          <option value="Before Food">B/F</option>
                           <option value="-">-</option>
-                          <option value="After Food">After Food</option>
-                          <option value="Before Food">Before Food</option>
-                          <option value="With Food">With Food</option>
                         </select>
                     </div>
 
@@ -532,7 +618,7 @@ export default function App() {
                                 min="1"
                                 value={med.duration} 
                                 className="text-center px-1"
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                onChange={(e) => {
                                     const newMeds = medicines.map(m => m.id === med.id ? {...m, duration: e.target.value} : m);
                                     setMedicines(newMeds);
                                 }}
@@ -560,7 +646,7 @@ export default function App() {
                             placeholder="Additional Remarks..." 
                             className="bg-transparent border-0 border-b border-slate-200 rounded-none focus-visible:ring-0 focus-visible:border-blue-500 px-0 text-xs text-slate-500"
                             value={med.remarks}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                            onChange={(e) => {
                                 const newMeds = medicines.map(m => m.id === med.id ? {...m, remarks: e.target.value} : m);
                                 setMedicines(newMeds);
                             }}
@@ -586,7 +672,7 @@ export default function App() {
               <Input 
                 type="date"
                 value={followUpDate} 
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFollowUpDate(e.target.value)}
+                onChange={(e) => setFollowUpDate(e.target.value)}
                 className="bg-white"
               />
             </div>
@@ -595,7 +681,7 @@ export default function App() {
               <Input 
                 placeholder="Ex: Blood Test Review..." 
                 value={followUpReason} 
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFollowUpReason(e.target.value)}
+                onChange={(e) => setFollowUpReason(e.target.value)}
                 className="bg-white"
               />
             </div>

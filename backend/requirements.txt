@@ -7,3 +7,5 @@ python-multipart
 python-Levenshtein
 requests
 supabase
+passlib
+bcrypt==3.2.0
